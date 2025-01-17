@@ -1,0 +1,23 @@
+#rna-seq counts
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-09.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-08.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-07.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-06.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-05.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-04.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-03.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-02.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006022/OMIX006022-01.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX004308/OMIX004308-06.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX004308/OMIX004308-07.tar.gz
+#atac-seq fragments
+https://download.cncb.ac.cn/OMIX/OMIX004305/OMIX004305-03.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-05.fragments.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-03.fragments.tsv.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-01.fragments.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-06.fragments.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-04.fragments.tsv.gz
+https://download.cncb.ac.cn/OMIX/OMIX006021/OMIX006021-02.fragments.tsv.gz
+https://download.cncb.ac.cn/OMIX/OMIX004305/OMIX004305-04.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX004305/OMIX004305-02.tar.gz
+https://download.cncb.ac.cn/OMIX/OMIX004305/OMIX004305-01.tar.gz
