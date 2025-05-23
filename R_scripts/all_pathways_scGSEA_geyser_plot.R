@@ -17,7 +17,7 @@ library(rogme)
 #combined <- readRDS("/ix/djishnu/Alisa/Tfh/Ribeiro_Collaboration/sc_Data/LN_Tfh_45_Th1_noNaive_noCD8_combo.rds")
 combined <- readRDS("/ix/djishnu/Alisa/Tfh/Ribeiro_Collaboration/sc_Data/LN_Tfh_45_Th2_noNaive_noCD8_combo.rds")
 
-#Use this to match your gene lists to make sure the gene is in your set before running enrichment
+#Use this to match your gene lists to make sure the gene is in your dataset before running enrichment
 seurat_genes <- rownames(combined)
 ###########################################################################
 
