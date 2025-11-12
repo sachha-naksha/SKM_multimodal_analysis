@@ -14,6 +14,11 @@ from statsmodels.nonparametric.smoothers_lowess import lowess # For LOWESS
 from pathlib import Path
 from itertools import chain, repeat
 
+import matplotlib.animation as animation
+from matplotlib.animation import FFMpegWriter, PillowWriter
+from IPython.display import HTML, display
+from IPython.display import FileLink
+
 ####### Utils #######
 
 def gmt_to_decoupler(pth: Path) -> pd.DataFrame:
@@ -31,7 +36,7 @@ def gmt_to_decoupler(pth: Path) -> pd.DataFrame:
         columns=["geneset", "genesymbol"],
     )
 
-def gmt_to_decoupler_multiple_pathways(gmt_paths):
+def gmt_to_decoupler_multiple_pathways(gmt_paths, geneset_name=None, genesymbol_name=None):
     """Parse multiple gmt files and return a combined decoupler pathway dataframe."""
     all_records = []
     for pth in gmt_paths:
@@ -39,7 +44,7 @@ def gmt_to_decoupler_multiple_pathways(gmt_paths):
             for line in f:
                 name, _, *genes = line.strip().split("\t")
                 all_records.extend(zip(repeat(name), genes))
-    return pd.DataFrame.from_records(all_records, columns=["geneset", "genesymbol"])
+    return pd.DataFrame.from_records(all_records, columns=[geneset_name, genesymbol_name])
 
 ####### Plotting functions #######
 
@@ -890,3 +895,212 @@ def plot_multi_smoothed_lines_from_df(
     if main_figure_title: fig.suptitle(main_figure_title, fontsize=16, y=1.02 if n_subplot_rows > 1 else 1.05)
     plt.tight_layout(rect=[0, 0, 1, 0.97 if main_figure_title and n_subplot_rows > 1 else 0.98])
     plt.show()
+
+def create_animated_pathway_plot(
+    df_cell_level: pd.DataFrame,
+    score_cols: list,
+    pseudotime_key: str = 'Pseudotime',
+    group_by_key: str = 'Annotation',
+    smoothing_method: str = 'gaussian',
+    smoothing_strength: float = 120.0,
+    geneset_sizes: pd.Series = None,
+    groups_to_plot: list = None,
+    colors_dict: dict = None,
+    legend_labels_map: dict = None,
+    n_subplot_cols: int = 2,
+    figsize_per_subplot: tuple = (7, 4),
+    # Animation parameters
+    nframes: int = 200,
+    fps: int = 30,
+    dot_size: int = 150,
+    output_file: str = 'pathway_animation.mp4',
+    use_gif: bool = False  # Set True if ffmpeg doesn't work
+):
+    """
+    Creates animated pathway plots with moving dots.
+    """
+    
+    print("Starting animation creation...")
+    
+    # Validate inputs
+    required_cols = score_cols + [pseudotime_key, group_by_key]
+    missing = [c for c in required_cols if c not in df_cell_level.columns]
+    if missing:
+        print(f"ERROR: Missing columns: {missing}")
+        return None
+    
+    # Setup figure
+    num_scores = len(score_cols)
+    n_subplot_rows = (num_scores + n_subplot_cols - 1) // n_subplot_cols
+    
+    fig, axes = plt.subplots(
+        n_subplot_rows, n_subplot_cols,
+        figsize=(figsize_per_subplot[0] * n_subplot_cols, 
+                figsize_per_subplot[1] * n_subplot_rows),
+        squeeze=False
+    )
+    axes = axes.flatten()
+    
+    # Store animation data
+    all_lines_data = []
+    
+    # Plot each pathway
+    for subplot_idx, score_col in enumerate(score_cols):
+        ax = axes[subplot_idx]
+        
+        # Get data for this pathway
+        plot_df = df_cell_level[[score_col, pseudotime_key, group_by_key]].copy()
+        plot_df = plot_df.dropna()
+        
+        if plot_df.empty:
+            ax.text(0.5, 0.5, 'No Data', ha='center', va='center', transform=ax.transAxes)
+            ax.axis('off')
+            continue
+        
+        # Determine groups
+        if groups_to_plot:
+            groups = [g for g in groups_to_plot if g in plot_df[group_by_key].unique()]
+        else:
+            groups = sorted(plot_df[group_by_key].unique())
+        
+        # Plot each group
+        for group_idx, group in enumerate(groups):
+            group_data = plot_df[plot_df[group_by_key] == group].copy()
+            group_data = group_data.sort_values(pseudotime_key)
+            
+            if len(group_data) < 2:
+                continue
+            
+            x_vals = group_data[pseudotime_key].values
+            y_vals = group_data[score_col].values
+            
+            # Apply smoothing
+            if smoothing_method == 'gaussian' and len(y_vals) > 10:
+                try:
+                    y_vals_smooth = gaussian_filter1d(y_vals, sigma=smoothing_strength)
+                except:
+                    y_vals_smooth = y_vals
+                    print(f"Warning: Smoothing failed for {group} in {score_col}")
+            else:
+                y_vals_smooth = y_vals
+            
+            # Get color
+            color = colors_dict.get(group, f'C{group_idx}') if colors_dict else f'C{group_idx}'
+            label = legend_labels_map.get(group, group) if legend_labels_map else group
+            
+            # Plot line
+            line, = ax.plot(x_vals, y_vals_smooth, color=color, linewidth=1.5, 
+                           label=label, alpha=0.8)
+            
+            # Create dot for animation (initially invisible)
+            dot = ax.scatter([], [], s=dot_size, color=color, 
+                           zorder=100, edgecolors='white', linewidths=2)
+            
+            # Store data for animation
+            all_lines_data.append({
+                'ax': ax,
+                'x': x_vals,
+                'y': y_vals_smooth,
+                'dot': dot,
+                'color': color
+            })
+        
+        # Format subplot
+        title = score_col.replace('_', ' ')
+        if geneset_sizes is not None and score_col in geneset_sizes.index:
+            title += f"\n(n={int(geneset_sizes[score_col])})"
+        
+        ax.set_title(title, fontsize=12)
+        ax.set_xlabel(r"Pseudotime $\rightarrow$", fontsize=10)
+        ax.set_ylabel("Score", fontsize=10)
+        ax.legend(loc='upper left', frameon=False, fontsize=9)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.grid(True, alpha=0.3)
+    
+    # Hide unused subplots
+    for idx in range(num_scores, len(axes)):
+        axes[idx].axis('off')
+    
+    plt.tight_layout()
+    
+    print(f"Figure created with {len(all_lines_data)} animated lines")
+    
+    # Create animation
+    def init():
+        """Initialize animation"""
+        for line_data in all_lines_data:
+            line_data['dot'].set_offsets(np.empty((0, 2)))
+        return [ld['dot'] for ld in all_lines_data]
+    
+    def animate(frame):
+        """Update function for each frame"""
+        progress = frame / (nframes - 1)
+        
+        for line_data in all_lines_data:
+            x = line_data['x']
+            y = line_data['y']
+            
+            if len(x) > 0:
+                # Find position along line
+                idx = int(progress * (len(x) - 1))
+                idx = min(idx, len(x) - 1)
+                
+                # Update dot position
+                line_data['dot'].set_offsets([[x[idx], y[idx]]])
+        
+        return [ld['dot'] for ld in all_lines_data]
+    
+    # Create the animation
+    print(f"Creating animation with {nframes} frames at {fps} fps...")
+    anim = animation.FuncAnimation(
+        fig, animate, init_func=init,
+        frames=nframes, interval=1000/fps,
+        blit=True, repeat=True
+    )
+    
+    # Save animation
+    try:
+        if use_gif:
+            # Use GIF if ffmpeg doesn't work
+            output_file = output_file.replace('.mp4', '.gif')
+            print(f"Saving as GIF to {output_file}...")
+            writer = PillowWriter(fps=fps)
+            anim.save(output_file, writer=writer, dpi=100)
+            print(f"✓ GIF saved successfully!")
+        else:
+            # Try MP4
+            print(f"Saving as MP4 to {output_file}...")
+            writer = FFMpegWriter(fps=fps, codec='mpeg4', bitrate=1800)
+            anim.save(output_file, writer=writer, dpi=100)
+            print(f"✓ MP4 saved successfully!")
+        
+        # Create download link
+        display(FileLink(output_file))
+        print(f"\nAnimation saved! Click the link above to download.")
+        
+        return anim, fig
+        
+    except Exception as e:
+        print(f"\n❌ Error saving animation: {e}")
+        print("\nTrying alternative methods...")
+        
+        # Try GIF as fallback
+        try:
+            output_file_gif = output_file.replace('.mp4', '.gif')
+            print(f"Attempting GIF format: {output_file_gif}")
+            writer = PillowWriter(fps=fps)
+            anim.save(output_file_gif, writer=writer, dpi=100)
+            print(f"✓ GIF saved successfully!")
+            display(FileLink(output_file_gif))
+            return anim, fig
+        except Exception as e2:
+            print(f"❌ GIF also failed: {e2}")
+            print("\n🔧 TROUBLESHOOTING:")
+            print("1. Check if ffmpeg is installed: !which ffmpeg")
+            print("2. Install ffmpeg: conda install ffmpeg")
+            print("3. Or use: use_gif=True in the function call")
+            print("\n📺 Displaying animation in notebook instead...")
+            
+            # Show in notebook as last resort
+            return HTML(anim.to_jshtml()), fig
