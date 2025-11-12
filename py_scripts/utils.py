@@ -7,17 +7,17 @@ from anndata import AnnData
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.animation as animation
+from matplotlib.animation import FFMpegWriter, PillowWriter
+from IPython.display import HTML, display
+from IPython.display import FileLink
+
 from sklearn.preprocessing import MinMaxScaler
 from scipy.ndimage import gaussian_filter1d # For Gaussian smoothing
 from statsmodels.nonparametric.smoothers_lowess import lowess # For LOWESS
 
 from pathlib import Path
 from itertools import chain, repeat
-
-import matplotlib.animation as animation
-from matplotlib.animation import FFMpegWriter, PillowWriter
-from IPython.display import HTML, display
-from IPython.display import FileLink
 
 ####### Utils #######
 
