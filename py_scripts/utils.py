@@ -1168,17 +1168,7 @@ def plot_violin_box_combo(data, x_var, y_var, title=None, x_ticks=None, palette=
     # Set initial y-axis limits
     ax.set_ylim(y_min_plot, y_max_plot)
     
-    # Set appropriate tick intervals based on data range
-    if y_range < 0.1:
-        tick_interval = 0.02
-    elif y_range < 0.5:
-        tick_interval = 0.05
-    elif y_range < 2.0:
-        tick_interval = 0.1
-    else:
-        tick_interval = 0.5
-    
-    ax.yaxis.set_major_locator(plt.MultipleLocator(tick_interval))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6, steps=[1, 2, 2.5, 5, 10]))
 
     # Determine order
     if x_ticks is not None:
